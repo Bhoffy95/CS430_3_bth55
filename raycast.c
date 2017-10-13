@@ -34,7 +34,7 @@ int next_char(FILE* file);
 
 void read_json(char* filename);
 
-void expected_char(FILE* file, int n);
+void skip_to(FILE* file, int n);
 
 void skip_ws(FILE* file);
 
@@ -42,27 +42,20 @@ char* next_string(FILE* file);
 
 double next_num(FILE* file);
 
-double* next_vector(FILE* file);
-
 int line = 1;
 
 
 
-int next_char(FILE* file){
+int next_char(FILE* file){//method to advance to the next char and return it. Advances line if \n
   int n = fgetc(file);
 
   if(n == '\n'){
     line += 1;
   }
-  /*if (n == EOF){
-    fprintf(stderr, "Error: File end reached unexpectedly.");
-    fclose(file);
-    exit(1);
-    }*/
   return n;
 }
 
-void skip_to(FILE* file, int n){
+void skip_to(FILE* file, int n){//verify that the next char is expected
   int x = next_char(file);
   if(x == n){
     return;
@@ -74,7 +67,7 @@ void skip_to(FILE* file, int n){
     }
 }
 
-void skip_space(FILE* file){
+void skip_space(FILE* file){//skip empty space in the line
   int n = next_char(file);
   while(n = 10){
     line += 1;
@@ -83,7 +76,7 @@ void skip_space(FILE* file){
   ungetc(n, file);
 }
 
-char* next_string(FILE *file){
+char* next_string(FILE *file){//get next chars and build a string. Returns the string.
   char buffer[129];
   int n;
   int i = 0;
@@ -112,7 +105,7 @@ char* next_string(FILE *file){
   return (char *)strdup(buffer);
 }
 
-double next_num(FILE* file){
+double next_num(FILE* file){//gets the next number value (double)
   double value;
   int count = fscanf(file, "%lf", &value);
   if(count != 1){
@@ -123,7 +116,7 @@ double next_num(FILE* file){
   return value;
 }
 
-void read_json(char *file){
+void read_json(char *file){//read the file in, and save all of the values into an array of spheres and planes.
   
   int n;
   int temp_type;
@@ -131,16 +124,16 @@ void read_json(char *file){
   FILE* json = fopen(file, "r");
   char* key;
   char* val;
-  if (json == NULL){
+  if (json == NULL){//if the file does not exist: error
     fprintf(stderr, "Error: No file found named \"%s\"\n", file);
     fclose(json);
     exit(1);
   }
-  else{
+  else{//a check for debugging
     fprintf(stdout, "File not empty.\n");
   }
   n = fgetc(json);
-  if(n < 97 || n > 122){
+  if(n < 97 || n > 122){//checks for letters
     fprintf(stderr, "Error: non-letter charcter. %s.\n", n);
     fclose(json);
     exit(1);
@@ -148,27 +141,27 @@ void read_json(char *file){
   else{
     ungetc(n, json);
   }
-  key = next_string(json);
+  key = next_string(json);//get the first string in the line
   fprintf(stdout, "String = %s \n", key);
-  if(strcmp(key, "camera") == 0){
+  if(strcmp(key, "camera") == 0){//check string with camera
     Camera camera = {0, 0};
     fprintf(stdout, "Found a camera object...\n");
-    val = next_string(json);
+    val = next_string(json);//get the first property string of camera
     fprintf(stdout, "Second string: %s\n", val);
-    while(n != 10){
-      if(strcmp(val, "width") == 0){
+    while(n != 10){//when n = \n will break
+      if(strcmp(val, "width") == 0){//check if element is width
 	fprintf(stdout, "Found 'width' id of camera.\n");
-	camera.width = next_num(json);
+	camera.width = next_num(json);//save value in structure
 	fprintf(stdout, "Camera width: %lf\n", camera.width);
 	skip_to(json, ',');
-        val = next_string(json);
+        val = next_string(json);//move to next string
 	fprintf(stdout, "third value: %s\n", val);
       }
       else if(strcmp(val, "height") == 0){
 	fprintf(stdout, "Found 'height' id of camera.\n");
-	camera.height = next_num(json);
+	camera.height = next_num(json);//save value in structure
 	fprintf(stdout, "Camera height: %lf\n", camera.height);
-	n = next_char(json);
+	n = next_char(json);//update n to be \n
 	val = next_string(json);
       }
       else{
@@ -179,7 +172,7 @@ void read_json(char *file){
    } 
   }
   else if(strcmp(key, "sphere") == 0){
-    sphere Sphere = {};
+    sphere Sphere = {};//init sphere object
     fprintf(stdout, "Got Here.....\n");
     sphereArray[item_count] = Sphere;
     fprintf(stdout, "Got Here.....\n");
@@ -191,14 +184,14 @@ void read_json(char *file){
     while(n != 10){
       if(strcmp(val, "position") == 0){
 	fprintf(stdout, "Position Sphere Found.\n");
-	Sphere.position[0] = next_num(json);
+	Sphere.position[0] = next_num(json);//add element to the structure
 	next_string(json);
 	Sphere.position[1] = next_num(json);
 	next_string(json);
 	Sphere.position[2] = next_num(json);
 	next_string(json);
 	fprintf(stdout, "sphere position 1: %lf, pos 2: %lf, pos 3: %lf\n", Sphere.position[0], Sphere.position[1], Sphere.position[2]);
-	val = next_string(json);
+	val = next_string(json);//get next property string
       }
       else if(strcmp(val, "radius") == 0){
 	fprintf(stdout, "radius Sphere Found.\n");
@@ -299,7 +292,7 @@ int main(int argc, char *argv[]){
   fprintf(stdout, "width = %d\n", width);
   fprintf(stdout, "height = %d\n", height);
   fprintf(stdout, "Beginning file reading...");
-  read_json(argv[3]);
+  read_json(argv[3]);//call read_json with the input file
   fprintf(stdout, "File reading Completed...");
   exit(0);
 }

@@ -30,7 +30,6 @@ sphere sphereArray[128];
 plane planeArray[128];
 
 //create json reading functions
-int next_char(FILE* file);
 
 void read_json(char* filename);
 
@@ -44,14 +43,7 @@ int line = 1;
 
 
 
-int next_char(FILE* file){//method to advance to the next char and return it. Advances line if \n
-  int n = fgetc(file);
 
-  if(n == '\n'){
-    line += 1;
-  }
-  return n;
-}
 
 void skip_to(FILE* file, int n){//skip to a specified character
   int x = fgetc(file);
@@ -169,8 +161,8 @@ void read_json(char *file){//read the file in, and save all of the values into a
 	temp_type = 3;//3 is a plane type
 	fprintf(stdout, "Found a plane\n");
       }
-      else if(strcmp(val, "width") == 0){
-	if(temp_type != 1){
+      else if(strcmp(val, "width") == 0){//store width
+	if(temp_type != 1){//checks for camera type
 	  fprintf(stderr, "Error: width attribute on a non-camera object.\n");
 	}
 	else{
@@ -178,7 +170,7 @@ void read_json(char *file){//read the file in, and save all of the values into a
 	  fprintf(stdout, "Found Width: %lf\n", width);
 	}
       }
-      else if(strcmp(val, "height") == 0){
+      else if(strcmp(val, "height") == 0){//store height
 	if(temp_type != 1){
 	  fprintf(stderr, "Error: height attribute on a non-camera object.\n");
 	}
@@ -187,7 +179,7 @@ void read_json(char *file){//read the file in, and save all of the values into a
 	  fprintf(stdout, "Found Height: %lf\n", height);
 	}
       }
-      else if(strcmp(val, "color") == 0){
+      else if(strcmp(val, "color") == 0){//store into color array
 	fgetc(json);
 	colors[0] = next_num(json);
 	fgetc(json);
@@ -197,7 +189,7 @@ void read_json(char *file){//read the file in, and save all of the values into a
 	fprintf(stdout, "Colors Array: %lf,%lf,%lf\n", colors[0], colors[1], colors[2]);
 	
       }
-      else if(strcmp(val, "position") == 0){
+      else if(strcmp(val, "position") == 0){//store into array for position
 	fgetc(json);
 	position[0] = next_num(json);
 	fgetc(json);
@@ -206,11 +198,11 @@ void read_json(char *file){//read the file in, and save all of the values into a
 	position[2] = next_num(json);
 	fprintf(stdout, "Position Array: %lf %lf %lf\n", position[0], position[1], position[3]);
       }
-      else if(strcmp(val, "radius") == 0){
+      else if(strcmp(val, "radius") == 0){//store radius
 	radius = next_num(json);
 	fprintf(stdout, "Radius: %lf\n", radius);
       }
-      else if(strcmp(val, "normal") == 0){
+      else if(strcmp(val, "normal") == 0){//store normal info into array
 	fgetc(json);
 	normal[0] = next_num(json);
 	fgetc(json);
@@ -229,13 +221,13 @@ void read_json(char *file){//read the file in, and save all of the values into a
     n = fgetc(json);
     
   }
-  if(temp_type == 1){
+  if(temp_type == 1){//save the camera info
 	Camera camera = {0, 0};
 	camera.width = width;
 	camera.height = height;
 	fprintf(stdout, "Saving Camera Info:\n");
       }
-      else if(temp_type == 2){
+  else if(temp_type == 2){//save the sphere information
 	sphere Sphere = {};
 	Sphere.color[0] = colors[0];
 	Sphere.color[1] = colors[1];
@@ -246,7 +238,7 @@ void read_json(char *file){//read the file in, and save all of the values into a
 	Sphere.radius = radius;
 	sphereArray[sphereCount] = Sphere;
       }
-      else if(temp_type == 3){
+      else if(temp_type == 3){//save the plan information
 	plane Plane = {};
 	Plane.color[0] = colors[0];
 	Plane.color[1] = colors[1];

@@ -30,6 +30,7 @@ typedef struct{
 sphere sphereArray[128];
 plane planeArray[128];
 
+
 //create json reading functions
 
 void read_json(char* filename);
@@ -42,11 +43,19 @@ double next_num(FILE* file);
 
 void normalizeVector(double *v);
 
+double scale(double val);
+
 double sphereIntersect(double *o, double *d, double *Cam, double r);
 
 double planeIntersect(double *o, double *d, double *c, double *n);
 
+void construct_scene(Camera camera, sphere *Sphere, plane *Plane, Pixel *pixel, int width, int height);
+
 int line = 1;
+
+int sphereCount = 0;
+
+int planeCount = 0;
 
 
 
@@ -103,8 +112,6 @@ void read_json(char *file){//read the file in, and save all of the values into a
   int n;
   double num;
   int temp_type;
-  int sphereCount = 0;
-  int planeCount = 0;
   FILE* json = fopen(file, "r");
   char* key;
   char* val;
@@ -270,6 +277,18 @@ void normalizeVector(double *v){//changes the vector given into a unit vector by
   v[2] = v[2] / length;
 }
 
+double scale(double val){
+  if(val < 0){
+    return 0;
+  }
+  else if(val > 1){
+    return 1;
+  }
+  else{
+    return val;
+  }
+}
+
 double sphereIntersect(double *o, double *d, double *S, double r){
   //o = origin of ray points, (x,y,z)
   //d = direction of ray (x,y,z)
@@ -313,6 +332,61 @@ double planeIntersect(double *o, double *d, double *c, double *n){
     return t;
   }
   return -1;
+}
+
+void construct_scene(Camera camera, sphere *Sphere, plane *Plane, Pixel *pixel, int width, int height){
+
+  double cam_width = camera.width;
+  double cam_height = camera.height;
+  double Op[3];
+  double Dp[3];
+  double pixWidth = cam_width / width;
+  double pixHeight = cam_height / height;
+  int y, x;
+
+  for(y = 0; y < height; y++){
+    for(x = 0; x < width; x++){
+      double closest_t = 9007199254740992;//number is highest Double. INFINITY not working?
+      sphere closest_sphere;
+      plane closest_plane;
+      int i;
+      int position = (height - (y+1)) * width + x;
+      double origin[3] = {0,0,0};
+      double d[3] = {0 - (cam_width/2) + pixWidth * (x + 0.5),
+		     0 - (cam_height/2) + pixHeight * (y + 0.5),
+		     1};
+      normalizeVector(d);
+
+      for(i = 0; i < sphereCount; i++){
+	double t = 0;
+	t = sphereIntersect(origin, d, Sphere[i].position, Sphere[i].radius);
+
+	if(t > 0 && t < closest_t){
+	  closest_t = t;
+	  closest_sphere = Sphere[i];
+	}
+	if(closest_t > 0 && closest_t != 9007199254740992){
+	  pixel[position].r = Sphere[i].color[0];
+	  pixel[position].g = Sphere[i].color[1];
+	  pixel[position].b = Sphere[i].color[2];
+	  	  
+	}
+	else{
+	  pixel[position].r = 0;
+	  pixel[position].g = 0;
+	  pixel[position].b = 0;
+	}
+      }
+    }
+  }
+}
+
+void writeOut(Pixel *pixel, FILE *out_file, int width, int height, int max_color){
+
+  int current_col = 1;
+  fprintf(out_file, "P3\n%d %d\n%d\n", width, height, max_color);//write the P3 header to the output file
+
+  
 }
 
 int main(int argc, char *argv[]){

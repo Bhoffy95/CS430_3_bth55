@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 
 
 //create structs
@@ -38,6 +39,12 @@ void skip_to(FILE* file, int n);
 char* next_string(FILE* file, int n);
 
 double next_num(FILE* file);
+
+void normalizeVector(double *v);
+
+double sphereIntersect(double *o, double *d, double *Cam, double r);
+
+double planeIntersect(double *o, double *d, double *c, double *n);
 
 int line = 1;
 
@@ -111,7 +118,7 @@ void read_json(char *file){//read the file in, and save all of the values into a
 
   n = fgetc(json);
   while(n != EOF && (sphereCount + planeCount + 1) < 129){
-    fprintf(stdout, "Char found: %d\n", n);
+    //fprintf(stdout, "Char found: %d\n", n);
     if(n == 10){
       if(temp_type == 1){
 	Camera camera = {0, 0};
@@ -129,7 +136,7 @@ void read_json(char *file){//read the file in, and save all of the values into a
 	Sphere.radius = radius;
 	sphereArray[sphereCount] = Sphere;
 	sphereCount++;
-	fprintf(stdout, "sphere count: %d\n", sphereCount);
+	//fprintf(stdout, "sphere count: %d\n", sphereCount);
       }
       else if(temp_type == 3){
 	plane Plane = {};
@@ -148,18 +155,18 @@ void read_json(char *file){//read the file in, and save all of the values into a
     }
     else if(n > 64 && n < 123){
       val = next_string(json, n);
-      fprintf(stdout, "String: %s\n", val);
+      //fprintf(stdout, "String: %s\n", val);
       if(strcmp(val, "camera") == 0){
 	temp_type = 1;//1 is a camera type
-	fprintf(stdout, "Found a camera.\n");
+	//fprintf(stdout, "Found a camera.\n");
       }
       else if(strcmp(val, "sphere") == 0){
 	temp_type = 2;//2 is a sphere type
-	fprintf(stdout, "Found a sphere.\n");
+	//fprintf(stdout, "Found a sphere.\n");
       }
       else if(strcmp(val, "plane") == 0){
 	temp_type = 3;//3 is a plane type
-	fprintf(stdout, "Found a plane\n");
+	//fprintf(stdout, "Found a plane\n");
       }
       else if(strcmp(val, "width") == 0){//store width
 	if(temp_type != 1){//checks for camera type
@@ -167,7 +174,7 @@ void read_json(char *file){//read the file in, and save all of the values into a
 	}
 	else{
 	  width = next_num(json);
-	  fprintf(stdout, "Found Width: %lf\n", width);
+	  //fprintf(stdout, "Found Width: %lf\n", width);
 	}
       }
       else if(strcmp(val, "height") == 0){//store height
@@ -176,7 +183,7 @@ void read_json(char *file){//read the file in, and save all of the values into a
 	}
 	else{
 	  height = next_num(json);
-	  fprintf(stdout, "Found Height: %lf\n", height);
+	  //fprintf(stdout, "Found Height: %lf\n", height);
 	}
       }
       else if(strcmp(val, "color") == 0){//store into color array
@@ -186,7 +193,7 @@ void read_json(char *file){//read the file in, and save all of the values into a
 	colors[1] = next_num(json);
 	fgetc(json);
 	colors[2] = next_num(json);
-	fprintf(stdout, "Colors Array: %lf,%lf,%lf\n", colors[0], colors[1], colors[2]);
+	//fprintf(stdout, "Colors Array: %lf,%lf,%lf\n", colors[0], colors[1], colors[2]);
 	
       }
       else if(strcmp(val, "position") == 0){//store into array for position
@@ -196,11 +203,11 @@ void read_json(char *file){//read the file in, and save all of the values into a
 	position[1] = next_num(json);
 	fgetc(json);
 	position[2] = next_num(json);
-	fprintf(stdout, "Position Array: %lf %lf %lf\n", position[0], position[1], position[3]);
+	//fprintf(stdout, "Position Array: %lf %lf %lf\n", position[0], position[1], position[3]);
       }
       else if(strcmp(val, "radius") == 0){//store radius
 	radius = next_num(json);
-	fprintf(stdout, "Radius: %lf\n", radius);
+	//fprintf(stdout, "Radius: %lf\n", radius);
       }
       else if(strcmp(val, "normal") == 0){//store normal info into array
 	fgetc(json);
@@ -209,7 +216,7 @@ void read_json(char *file){//read the file in, and save all of the values into a
 	normal[1] = next_num(json);
 	fgetc(json);
 	normal[2] = next_num(json);
-	fprintf(stdout, "Normal Array: %lf,%lf,%lf\n", normal[0], normal[1], normal[2]);
+	//fprintf(stdout, "Normal Array: %lf,%lf,%lf\n", normal[0], normal[1], normal[2]);
       }
       else if(strcmp(val, "") == 0){
         
@@ -225,7 +232,7 @@ void read_json(char *file){//read the file in, and save all of the values into a
 	Camera camera = {0, 0};
 	camera.width = width;
 	camera.height = height;
-	fprintf(stdout, "Saving Camera Info:\n");
+	//fprintf(stdout, "Saving Camera Info:\n");
       }
   else if(temp_type == 2){//save the sphere information
 	sphere Sphere = {};
@@ -253,6 +260,59 @@ void read_json(char *file){//read the file in, and save all of the values into a
       }
 
   
+}
+
+void normalizeVector(double *v){//changes the vector given into a unit vector by dividing each coordinate by
+  //the length of the vector.
+  double length = sqrt((v[0] * v[0]) + (v[1] * v[1]) + (v[2] * v[2]));
+  v[0] = v[0] / length;
+  v[1] = v[1] / length;
+  v[2] = v[2] / length;
+}
+
+double sphereIntersect(double *o, double *d, double *S, double r){
+  //o = origin of ray points, (x,y,z)
+  //d = direction of ray (x,y,z)
+  //S = center of sphere (x,y,z)
+  //r = sphere radius
+  
+  double a = (d[0] * d[0]) +(d[1] * d[1]) + (d[2] * d[2]);
+  double b = (2 * (o[0] * d[0] - d[0] * S[0] + o[1] * d[1] - d[1] * S[1] + o[2] * d[2] - d[2] * S[2]));
+  double c = (o[0] * o[0]) - 2 * o[0] * S[0] + (S[0] * S[0]) + (o[1] * o[1]) - 2 * o[1] * S[1] + (S[1] * S[1]) + (o[2] * o[2]) - 2 * o[2] * S[2] + (S[2] * S[2]) - (r * r);
+  double t0;
+  double t1;
+
+  double det = pow(b, 2) - 4 * a * c;
+
+  if(det < 0){
+    return -1;
+  }
+
+  det = sqrt(det);
+  t0 = (-b - det) / (2*a);
+  if(t0 > 0){
+    return t0;
+  }
+  t1 = (-b + det)/ (2*a);
+  if(t1 > 0){
+    return t1;
+  }
+  return -1;
+}
+
+double planeIntersect(double *o, double *d, double *c, double *n){
+  //o = origin of ray points, (x,y,z)
+  //d = direction of the ray (x,y,z)
+  //c = coordinates of the plane (x,y,z)
+  //n = normal of the plane (x,y,z)
+  double t;
+  normalizeVector(n);
+  t = (n[0] * c[0] + n[1] * c[1] + n[2] * c[2] - n[0] * o[0] - n[1] * o[1] - n[2] * o[2])/(n[0] * d[0] + n[1] * d[1] + n[2] * d[2]);
+
+  if(t > 0){
+    return t;
+  }
+  return -1;
 }
 
 int main(int argc, char *argv[]){
